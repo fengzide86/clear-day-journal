@@ -30,10 +30,17 @@ jobs:
       - run: pnpm exec vinext build --prerender-all
         env:
           GITHUB_PAGES: '1'
+      - name: Flatten Pages artifact
+        run: |
+          rm -rf site
+          mkdir -p site
+          cp -R dist/client/. site/
+          cp -R dist/client/clear-day-journal/_next site/_next
+          rm -rf site/clear-day-journal
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/client
+          path: site
 
   deploy:
     needs: build
