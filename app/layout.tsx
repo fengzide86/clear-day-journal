@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: '清醒日记 · 睡眠与精力记录',
   description: '轻松记录睡眠、咖啡、运动和每天的状态，发现自己的生活节奏。',
   robots: { index: false, follow: false },
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: process.env.GITHUB_PAGES === '1' ? '/clear-day-journal/favicon.svg' : '/favicon.svg' },
 };
 
 export default function RootLayout({

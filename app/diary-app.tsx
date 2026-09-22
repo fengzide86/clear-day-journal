@@ -26,7 +26,33 @@ function Choices({id,label,value,options,onChange}:{id:string;label:string;value
 function Score({id,label,value,onChange,labels=clearLabels}:{id:string;label:string;value:number|null;onChange:(value:number|null)=>void;labels?:string[]}){
   return <div className="score-field"><div className="field-label">{label}<span>{value===null?'未记录':`${value} / 5`}</span></div><Choices id={id} label={label} value={value} options={labels.map((text,i)=>({value:i+1,label:`${i+1} ${text}`}))} onChange={onChange}/></div>;
 }
+const LOCAL_ENTRIES_KEY='clear-day-entries-v1';
+function localEntries():SavedEntry[]{
+  try{
+    const raw=localStorage.getItem(LOCAL_ENTRIES_KEY);if(!raw)return [];
+    const value=JSON.parse(raw);return Array.isArray(value)?value:[];
+  }catch{return []}
+}
+function saveLocalEntries(entries:SavedEntry[]){localStorage.setItem(LOCAL_ENTRIES_KEY,JSON.stringify(entries));}
 async function request<T>(path:string,init?:RequestInit):Promise<T>{
+  if(typeof window!=='undefined'&&path.startsWith('/api/')){
+    const method=(init?.method??'GET').toUpperCase();
+    if(path.startsWith('/api/session')){
+      if(method==='DELETE')localStorage.removeItem('clear-day-access-v1');
+      return {} as T;
+    }
+    const entries=localEntries();
+    if(method==='GET')return {entries} as T;
+    if(method==='PUT'){
+      const value=validateEntry(JSON.parse(String(init?.body??'{}')));
+      const saved={...value,updatedAt:new Date().toISOString()};
+      saveLocalEntries(upsertEntries(entries,saved));return {entry:saved} as T;
+    }
+    if(method==='DELETE'){
+      const day=new URLSearchParams(path.split('?')[1]??'').get('day');
+      saveLocalEntries(entries.filter(entry=>entry.day!==day));return {deleted:day} as T;
+    }
+  }
   const response=await fetch(path,{...init,headers:{'Content-Type':'application/json',...init?.headers},cache:'no-store',signal:AbortSignal.timeout(20000)});
   let data:Record<string,unknown>;try{data=await response.json() as Record<string,unknown>;}catch{throw new Error('暂时无法连接，请稍后重试。');}
   if(!response.ok)throw new Error(typeof data.error==='string'?data.error:'操作没有完成，请重试。');
